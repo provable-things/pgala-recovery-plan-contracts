@@ -81,7 +81,7 @@ contract Agreement is Initializable, OwnableUpgradeable, IERC777RecipientUpgrade
         return _toClaim[_owner] - _claimed[_owner];
     }
 
-    function getAlreadyClaimedAmountFor(address _owner) public view returns (uint256) {
+    function getClaimedAmountFor(address _owner) public view returns (uint256) {
         return _claimed[_owner];
     }
 }
