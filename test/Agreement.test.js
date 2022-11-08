@@ -6,11 +6,11 @@ use(solidity)
 
 const IPFS_MULTIHASH = 'QmbpA3P8ZZRtLDnuQrKZAWUWe6xFsbfr3eESwhTtZXdCfW'
 
-let agreement, accounts, account1, pgala
+let agreement, accounts, account1, pgala, Agreement
 
 describe('Agreement', () => {
   beforeEach(async () => {
-    const Agreement = await ethers.getContractFactory('Agreement')
+    Agreement = await ethers.getContractFactory('Agreement')
     const PToken = await ethers.getContractFactory('PToken')
 
     accounts = await ethers.getSigners()
@@ -184,5 +184,22 @@ describe('Agreement', () => {
         'NothingToClaim'
       )
     }
+  })
+
+  it('should be able to acceptAndClaim after a contract upgrade', async () => {
+    const amount = '10000'
+    const balancePre = await pgala.balanceOf(account1.address)
+    expect(await agreement.setClaimFor(account1.address, amount))
+      .to.emit(agreement, 'ClaimForSet')
+      .withArgs(account1.address, amount)
+
+    await upgrades.upgradeProxy(agreement.address, Agreement)
+
+    expect(await agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH))
+      .to.emit(agreement, 'AcceptedAndClaimed')
+      .withArgs(account1.address, IPFS_MULTIHASH, amount)
+
+    const balancePost = await pgala.balanceOf(account1.address)
+    expect(balancePre.add(amount)).to.be.eq(balancePost)
   })
 })
