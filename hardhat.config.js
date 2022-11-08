@@ -33,7 +33,7 @@ module.exports = {
     },
   },
   etherscan: {
-    apiKey: getEnvironmentVariable('ETHERSCAN_API_KEY'),
+    apiKey: getEnvironmentVariable('BSCSCAN_API_KEY'),
   },
   gasReporter: {
     enabled: true,

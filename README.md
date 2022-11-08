@@ -30,12 +30,7 @@ pGALA recovery plan contracts
 Create an __.env__ file with the following fields:
 
 ```
-MAINNET_PRIVATE_KEY=
-ROPSTEN_PRIVATE_KEY=
-ROSPTENT_NODE=
-ETH_MAINNET_NODE=
 BSC_MAINNET_NODE=
-ETHERSCAN_API_KEY=
 BSCSCAN_API_KEY=
 BSC_MAINNET_PRIVATE_KEY=
 ```
