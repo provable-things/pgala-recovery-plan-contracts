@@ -1,6 +1,6 @@
-# pgala-compensation-plan-contracts
+# pgala-recovery-plan-contracts
 
-pGala compensation plan contracts
+pGALA recovery plan contracts
 
 &nbsp;
 

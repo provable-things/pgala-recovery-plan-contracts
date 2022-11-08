@@ -1,5 +1,5 @@
 {
-  "name": "pgala-compensation-plan-contracts",
+  "name": "pgala-recovery-plan-contracts",
   "version": "0.0.1",
   "scripts": {
     "compile": "npx hardhat compile",
