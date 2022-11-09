@@ -1,8 +1,6 @@
-const { use, expect } = require('chai')
+const { expect } = require('chai')
 const { ethers, upgrades } = require('hardhat')
-const { solidity } = require('ethereum-waffle')
 const singletons = require('erc1820-ethers-registry')
-use(solidity)
 
 const IPFS_MULTIHASH = 'QmbpA3P8ZZRtLDnuQrKZAWUWe6xFsbfr3eESwhTtZXdCfW'
 
@@ -21,6 +19,7 @@ describe('Agreement', () => {
     pgala = await PToken.deploy('pToken GALA', 'GALA', ethers.utils.parseEther('100000000'))
     agreement = await upgrades.deployProxy(Agreement, [IPFS_MULTIHASH, pgala.address], {
       initializer: 'initialize',
+      kind: 'transparent',
     })
     await pgala.transfer(agreement.address, ethers.utils.parseEther('10000'))
   })
@@ -207,7 +206,9 @@ describe('Agreement', () => {
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount)
 
-    await upgrades.upgradeProxy(agreement.address, Agreement)
+    await upgrades.upgradeProxy(agreement.address, Agreement, {
+      kind: 'transparent',
+    })
 
     expect(await agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH))
       .to.emit(agreement, 'AcceptedAndClaimed')
