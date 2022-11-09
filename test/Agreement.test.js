@@ -2,7 +2,7 @@ const { expect } = require('chai')
 const { ethers, upgrades } = require('hardhat')
 const singletons = require('erc1820-ethers-registry')
 
-const IPFS_MULTIHASH = 'QmbpA3P8ZZRtLDnuQrKZAWUWe6xFsbfr3eESwhTtZXdCfW'
+const IPFS_MULTIHASH = 'ipfs multi hash'
 
 let agreement, accounts, owner, account1, pgala, Agreement
 
