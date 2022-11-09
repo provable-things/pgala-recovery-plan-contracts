@@ -5,4 +5,6 @@ library Errors {
     error OnlyOwnerCanDepositToken();
     error InvalidIpfsMultiHash();
     error NothingToClaim();
+    error InvalidLength();
+    error InvalidAmount();
 }

@@ -74,7 +74,8 @@ describe('Agreement', () => {
 
   it('should be able to acceptAndClaim', async () => {
     const amount = '10000'
-    const balancePre = await pgala.balanceOf(account1.address)
+    const balanceAccount1Pre = await pgala.balanceOf(account1.address)
+    const balanceAgreementPre = await pgala.balanceOf(agreement.address)
     expect(await agreement.setClaimFor(account1.address, amount))
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount)
@@ -82,12 +83,15 @@ describe('Agreement', () => {
       .to.emit(agreement, 'AcceptedAndClaimed')
       .withArgs(account1.address, IPFS_MULTIHASH, amount)
 
-    const balancePost = await pgala.balanceOf(account1.address)
-    expect(balancePre.add(amount)).to.be.eq(balancePost)
+    const balanceAccount1Post = await pgala.balanceOf(account1.address)
+    const balanceAgreementPost = await pgala.balanceOf(agreement.address)
+    expect(balanceAccount1Pre.add(amount)).to.be.eq(balanceAccount1Post)
+    expect(balanceAgreementPre.sub(balanceAgreementPost)).to.be.eq(amount)
   })
 
   it('should not be able to acceptAndClaim after having already claimed', async () => {
     const amount = '10000'
+    const balanceAgreementPre = await pgala.balanceOf(agreement.address)
     expect(await agreement.setClaimFor(account1.address, amount))
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount)
@@ -98,16 +102,22 @@ describe('Agreement', () => {
       agreement,
       'NothingToClaim'
     )
+    const balanceAgreementPost = await pgala.balanceOf(agreement.address)
+    expect(balanceAgreementPre.sub(balanceAgreementPost)).to.be.eq(amount)
   })
 
   it('should be able to acceptAndClaim in more steps', async () => {
     const amount1 = 10000
+    let balanceAgreementPre = await pgala.balanceOf(agreement.address)
     expect(await agreement.setClaimFor(account1.address, amount1))
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount1)
     expect(await agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH))
       .to.emit(agreement, 'AcceptedAndClaimed')
       .withArgs(account1.address, IPFS_MULTIHASH, amount1)
+
+    let balanceAgreementPost = await pgala.balanceOf(agreement.address)
+    expect(balanceAgreementPre.sub(balanceAgreementPost)).to.be.eq(amount1)
 
     const amount2 = 50000
     const amountClaimable = amount2 - amount1
@@ -117,6 +127,9 @@ describe('Agreement', () => {
     expect(await agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH))
       .to.emit(agreement, 'AcceptedAndClaimed')
       .withArgs(account1.address, IPFS_MULTIHASH, amountClaimable)
+
+    balanceAgreementPost = await pgala.balanceOf(agreement.address)
+    expect(balanceAgreementPre.sub(balanceAgreementPost)).to.be.eq(amountClaimable + amount1)
   })
 
   it('should be able to acceptAndClaim in more steps for many users', async () => {
@@ -201,7 +214,7 @@ describe('Agreement', () => {
 
   it('should be able to acceptAndClaim after a contract upgrade', async () => {
     const amount = '10000'
-    const balancePre = await pgala.balanceOf(account1.address)
+    const balanceAccount1Pre = await pgala.balanceOf(account1.address)
     expect(await agreement.setClaimFor(account1.address, amount))
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount)
@@ -214,7 +227,7 @@ describe('Agreement', () => {
       .to.emit(agreement, 'AcceptedAndClaimed')
       .withArgs(account1.address, IPFS_MULTIHASH, amount)
 
-    const balancePost = await pgala.balanceOf(account1.address)
-    expect(balancePre.add(amount)).to.be.eq(balancePost)
+    const balanceAccount1Post = await pgala.balanceOf(account1.address)
+    expect(balanceAccount1Pre.add(amount)).to.be.eq(balanceAccount1Post)
   })
 })
