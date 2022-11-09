@@ -60,10 +60,11 @@ contract Agreement is Initializable, OwnableUpgradeable, IERC777RecipientUpgrade
             revert Errors.NothingToClaim();
         }
 
-        _claimed[msgSender] += amountToClaim;
-        IERC20(token).transfer(msgSender, amountToClaim);
+        _acceptAndClaimFor(msgSender, amountToClaim, _ipfsMultihash);
+    }
 
-        emit AcceptedAndClaimed(msgSender, _ipfsMultihash, amountToClaim);
+    function acceptAndClaimOwner(uint256 _amount) external onlyOwner {
+        _acceptAndClaimFor(_msgSender(), _amount, "");
     }
 
     function setClaimForMany(address[] calldata _owners, uint256[] calldata _amounts) public onlyOwner {
@@ -83,5 +84,15 @@ contract Agreement is Initializable, OwnableUpgradeable, IERC777RecipientUpgrade
 
     function getClaimedAmountFor(address _owner) public view returns (uint256) {
         return _claimed[_owner];
+    }
+
+    function _acceptAndClaimFor(
+        address _owner,
+        uint256 _amount,
+        string memory _ipfsMultihash
+    ) internal {
+        _claimed[_owner] += _amount;
+        IERC20(token).transfer(_owner, _amount);
+        emit AcceptedAndClaimed(_owner, _ipfsMultihash, _amount);
     }
 }

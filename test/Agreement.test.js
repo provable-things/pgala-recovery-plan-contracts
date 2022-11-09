@@ -6,7 +6,7 @@ use(solidity)
 
 const IPFS_MULTIHASH = 'QmbpA3P8ZZRtLDnuQrKZAWUWe6xFsbfr3eESwhTtZXdCfW'
 
-let agreement, accounts, account1, pgala, Agreement
+let agreement, accounts, owner, account1, pgala, Agreement
 
 describe('Agreement', () => {
   beforeEach(async () => {
@@ -14,8 +14,9 @@ describe('Agreement', () => {
     const PToken = await ethers.getContractFactory('PToken')
 
     accounts = await ethers.getSigners()
+    owner = accounts[0]
     account1 = accounts[1]
-    await singletons.ERC1820Registry(accounts[0])
+    await singletons.ERC1820Registry(owner)
 
     pgala = await PToken.deploy('pToken GALA', 'GALA', ethers.utils.parseEther('100000000'))
     agreement = await upgrades.deployProxy(Agreement, [IPFS_MULTIHASH, pgala.address], {
@@ -184,6 +185,19 @@ describe('Agreement', () => {
         'NothingToClaim'
       )
     }
+  })
+
+  it('should not be able to acceptAndClaimOwner', async () => {
+    await expect(agreement.connect(account1).acceptAndClaimOwner('1')).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
+  })
+
+  it('should be able toacceptAndClaimOwner', async () => {
+    const amount = '10000'
+    expect(await agreement.acceptAndClaimOwner(amount))
+      .to.emit(agreement, 'AcceptedAndClaimed')
+      .withArgs(owner.address, '', amount)
   })
 
   it('should be able to acceptAndClaim after a contract upgrade', async () => {
