@@ -1,6 +1,6 @@
 const { ethers, upgrades } = require('hardhat')
 
-const IPFS_MULTIHASH = ''
+const IPFS_MULTIHASH = 'QmShGLRoEDbghUWBux6ndGTiBkeoKBrXdR1y1HPGsdkDyv'
 const TOKEN = '0x419C44C48Cd346C0b0933ba243BE02af46607c9B'
 
 const main = async () => {

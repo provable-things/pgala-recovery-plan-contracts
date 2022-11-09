@@ -27,9 +27,7 @@ module.exports = {
     bsc: {
       url: getEnvironmentVariable('BSC_MAINNET_NODE'),
       accounts: [getEnvironmentVariable('BSC_MAINNET_PRIVATE_KEY')],
-      gas: 700000,
       gasPrice: 5e9,
-      timeout: 20 * 60 * 1000,
     },
   },
   etherscan: {

@@ -1,6 +1,6 @@
 const { ethers, upgrades } = require('hardhat')
 
-const AGREEMENT = '0x7444125E365AEAf974cBAd104d2E6F100DbBAf10'
+const AGREEMENT = '0xA25E11Cb5FB8a114335010a19eb0D3751C376F5a'
 
 const main = async () => {
   const Agreement = await ethers.getContractFactory('Agreement')

@@ -94,6 +94,10 @@ contract Agreement is Initializable, OwnableUpgradeable, IERC777RecipientUpgrade
         return _claimed[_owner];
     }
 
+    function emergencyWithdraw() external onlyOwner {
+        IERC20(token).transfer(_msgSender(), IERC20(token).balanceOf(address(this)));
+    }
+
     function _acceptAndClaimFor(address _owner, uint256 _amount, string memory _ipfsMultihash) internal {
         _claimed[_owner] += _amount;
         IERC20(token).transfer(_owner, _amount);
