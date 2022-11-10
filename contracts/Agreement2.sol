@@ -39,11 +39,20 @@ contract Agreement2 is Initializable, OwnableUpgradeable {
             revert Errors.NothingToClaim();
         }
 
-        _acceptAndClaimFor(msgSender, amountToClaim, _ipfsMultihash);
+        _acceptAndClaimFor(msgSender, msgSender, amountToClaim, _ipfsMultihash);
     }
 
-    function acceptAndClaimOwner(uint256 _amount) external onlyOwner {
-        _acceptAndClaimFor(_msgSender(), _amount, "");
+    function acceptAndClaimManyOwner(address[] calldata _owners) external onlyOwner {
+        address msgSender = _msgSender();
+        for (uint256 i = 0; i < _owners.length; i++) {
+            uint256 amountToClaim = getClaimableAmountFor(_owners[i]);
+            _acceptAndClaimFor(_owners[i], msgSender, amountToClaim, "");
+        }
+    }
+
+    function acceptAndClaimOwner(address _owner) public onlyOwner {
+        uint256 amountToClaim = getClaimableAmountFor(_owner);
+        _acceptAndClaimFor(_owner, _msgSender(), amountToClaim, "");
     }
 
     function setClaimForMany(address[] calldata _owners, uint256[] calldata _amounts) public onlyOwner {
@@ -77,14 +86,14 @@ contract Agreement2 is Initializable, OwnableUpgradeable {
         _send(_msgSender(), _amount);
     }
 
-    function _acceptAndClaimFor(address _owner, uint256 _amount, string memory _ipfsMultihash) internal {
+    function _acceptAndClaimFor(address _owner, address _receiver, uint256 _amount, string memory _ipfsMultihash) internal {
         _claimed[_owner] += _amount;
-        _send(_owner, _amount);
+        _send(_receiver, _amount);
         emit AcceptedAndClaimed(_owner, _ipfsMultihash, _amount);
     }
 
     function _send(address _to, uint256 _amount) internal {
-        (bool sent,) = _to.call{value: _amount}("");
+        (bool sent, ) = _to.call{value: _amount}("");
         if (!sent) revert Errors.FailedToSendEther();
     }
 

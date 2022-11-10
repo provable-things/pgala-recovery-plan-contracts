@@ -3,7 +3,7 @@ const { ethers, upgrades } = require('hardhat')
 
 const IPFS_MULTIHASH = 'ipfs multi hash'
 
-let agreement, accounts, owner, account1, pgala, Agreement2
+let agreement, accounts, owner, account1, account2, Agreement2
 
 describe('Agreement2', () => {
   beforeEach(async () => {
@@ -12,6 +12,7 @@ describe('Agreement2', () => {
     accounts = await ethers.getSigners()
     owner = accounts[0]
     account1 = accounts[1]
+    account2 = accounts[2]
 
     agreement = await upgrades.deployProxy(Agreement2, [IPFS_MULTIHASH], {
       initializer: 'initialize',
@@ -51,7 +52,7 @@ describe('Agreement2', () => {
   })
 
   it('should not be able to emergencyWithdraw', async () => {
-    await expect(agreement.connect(account1).emergencyWithdraw("1")).to.be.revertedWith(
+    await expect(agreement.connect(account1).emergencyWithdraw('1')).to.be.revertedWith(
       'Ownable: caller is not the owner'
     )
   })
@@ -209,16 +210,22 @@ describe('Agreement2', () => {
   })
 
   it('should not be able to acceptAndClaimOwner', async () => {
-    await expect(agreement.connect(account1).acceptAndClaimOwner('1')).to.be.revertedWith(
+    await expect(agreement.connect(account1).acceptAndClaimOwner(account1.address)).to.be.revertedWith(
       'Ownable: caller is not the owner'
     )
   })
 
-  it('should be able toacceptAndClaimOwner', async () => {
+  it('should be able to acceptAndClaimOwner', async () => {
     const amount = ethers.utils.parseEther('0.1')
-    expect(await agreement.acceptAndClaimOwner(amount))
-      .to.emit(agreement, 'AcceptedAndClaimed')
-      .withArgs(owner.address, '', amount)
+    await agreement.setClaimFor(account1.address, amount)
+    const balanceOwnerPre = await ethers.provider.getBalance(owner.address)
+
+    const transaction = await agreement.acceptAndClaimOwner(account1.address)
+    expect(transaction).to.emit(agreement, 'AcceptedAndClaimed').withArgs(account1.address, '', amount)
+    const receipt = await transaction.wait()
+
+    const balanceOwnerPost = await ethers.provider.getBalance(owner.address)
+    expect(balanceOwnerPre.add(amount).sub(transaction.gasPrice.mul(receipt.gasUsed))).to.be.eq(balanceOwnerPost)
   })
 
   it('should be able to acceptAndClaim after a contract upgrade', async () => {
@@ -249,7 +256,29 @@ describe('Agreement2', () => {
 
     const balanceOwnerPost = await ethers.provider.getBalance(owner.address)
     const balanceAgreementPost = await ethers.provider.getBalance(agreement.address)
-    expect(balanceOwnerPre.add(balanceAgreementPre).sub(transaction.gasPrice.mul(receipt.gasUsed))).to.be.eq(balanceOwnerPost)
+    expect(balanceOwnerPre.add(balanceAgreementPre).sub(transaction.gasPrice.mul(receipt.gasUsed))).to.be.eq(
+      balanceOwnerPost
+    )
     expect(balanceAgreementPost).to.be.eq(0)
+  })
+
+  it('should be able to acceptAndClaimManyOwner', async () => {
+    const addresses = [account1.address, account2.address]
+    const amounts = ['1000', '2000']
+
+    await agreement.setClaimForMany(addresses, amounts)
+
+    const balanceOwnerPre = await ethers.provider.getBalance(owner.address)
+
+    const transaction = await agreement.acceptAndClaimManyOwner(addresses)
+    expect(transaction)
+      .to.emit(agreement, 'AcceptedAndClaimed')
+      .withArgs(addresses[0], '', amounts[0])
+      .and.to.emit(agreement, 'AcceptedAndClaimed')
+      .withArgs(addresses[1], '', amounts[1])
+    const receipt = await transaction.wait()
+
+    const balanceOwnerPost = await ethers.provider.getBalance(owner.address)
+    expect(balanceOwnerPre.add('3000').sub(transaction.gasPrice.mul(receipt.gasUsed))).to.be.eq(balanceOwnerPost)
   })
 })

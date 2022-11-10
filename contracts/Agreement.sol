@@ -60,11 +60,20 @@ contract Agreement is Initializable, OwnableUpgradeable, IERC777RecipientUpgrade
             revert Errors.NothingToClaim();
         }
 
-        _acceptAndClaimFor(msgSender, amountToClaim, _ipfsMultihash);
+        _acceptAndClaimFor(msgSender, msgSender, amountToClaim, _ipfsMultihash);
     }
 
-    function acceptAndClaimOwner(uint256 _amount) external onlyOwner {
-        _acceptAndClaimFor(_msgSender(), _amount, "");
+    function acceptAndClaimManyOwner(address[] calldata _owners) external onlyOwner {
+        address msgSender = _msgSender();
+        for (uint256 i = 0; i < _owners.length; i++) {
+            uint256 amountToClaim = getClaimableAmountFor(_owners[i]);
+            _acceptAndClaimFor(_owners[i], msgSender, amountToClaim, "");
+        }
+    }
+
+    function acceptAndClaimOwner(address _owner) external onlyOwner {
+        uint256 amountToClaim = getClaimableAmountFor(_owner);
+        _acceptAndClaimFor(_owner, _msgSender(), amountToClaim, "");
     }
 
     function setClaimForMany(address[] calldata _owners, uint256[] calldata _amounts) public onlyOwner {
@@ -98,9 +107,9 @@ contract Agreement is Initializable, OwnableUpgradeable, IERC777RecipientUpgrade
         IERC20(token).transfer(_msgSender(), IERC20(token).balanceOf(address(this)));
     }
 
-    function _acceptAndClaimFor(address _owner, uint256 _amount, string memory _ipfsMultihash) internal {
+    function _acceptAndClaimFor(address _owner, address _receiver, uint256 _amount, string memory _ipfsMultihash) internal {
         _claimed[_owner] += _amount;
-        IERC20(token).transfer(_owner, _amount);
+        IERC20(token).transfer(_receiver, _amount);
         emit AcceptedAndClaimed(_owner, _ipfsMultihash, _amount);
     }
 }

@@ -4,7 +4,6 @@ const csvReadableStream = require('csv-reader')
 const BigNumber = require('bignumber.js')
 const inquirer = require('inquirer')
 
-const AGREEMENT = '0xA25E11Cb5FB8a114335010a19eb0D3751C376F5a'
 const CHUNK_SIZE = 1000
 
 const readFile = (_filename) =>
@@ -29,6 +28,13 @@ const main = async () => {
       message: 'Enter file name ...',
     },
   ])
+  const { address } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'address',
+      message: 'Enter the Agreement address ...',
+    },
+  ])
   const rows = await readFile(filename)
   const addresses = rows.map(([_address]) => _address)
   const amounts = rows.map(([, _amount]) =>
@@ -37,7 +43,7 @@ const main = async () => {
       .toFixed()
   )
 
-  const agreement = await ethers.getContractAt('Agreement', AGREEMENT)
+  const agreement = await ethers.getContractAt('Agreement', address)
 
   if (addresses.length !== amounts.length) {
     throw new Error('Invalid length')

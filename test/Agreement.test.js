@@ -4,7 +4,7 @@ const singletons = require('erc1820-ethers-registry')
 
 const IPFS_MULTIHASH = 'ipfs multi hash'
 
-let agreement, accounts, owner, account1, pgala, Agreement
+let agreement, accounts, owner, account1, account2, pgala, Agreement
 
 describe('Agreement', () => {
   beforeEach(async () => {
@@ -14,6 +14,7 @@ describe('Agreement', () => {
     accounts = await ethers.getSigners()
     owner = accounts[0]
     account1 = accounts[1]
+    account2 = accounts[2]
     await singletons.ERC1820Registry(owner)
 
     pgala = await PToken.deploy('pToken GALA', 'GALA', ethers.utils.parseEther('100000000'))
@@ -200,16 +201,23 @@ describe('Agreement', () => {
   })
 
   it('should not be able to acceptAndClaimOwner', async () => {
-    await expect(agreement.connect(account1).acceptAndClaimOwner('1')).to.be.revertedWith(
+    await expect(agreement.connect(account1).acceptAndClaimOwner(account1.address)).to.be.revertedWith(
       'Ownable: caller is not the owner'
     )
   })
 
-  it('should be able toacceptAndClaimOwner', async () => {
+  it('should be able to acceptAndClaimOwner', async () => {
     const amount = '10000'
-    expect(await agreement.acceptAndClaimOwner(amount))
+    const balanceOwnerPre = await pgala.balanceOf(owner.address)
+
+    await agreement.setClaimFor(account1.address, amount)
+
+    expect(await agreement.acceptAndClaimOwner(account1.address))
       .to.emit(agreement, 'AcceptedAndClaimed')
-      .withArgs(owner.address, '', amount)
+      .withArgs(account1.address, '', amount)
+
+    const balanceOwnerPost = await pgala.balanceOf(owner.address)
+    expect(balanceOwnerPre.add(amount)).to.be.eq(balanceOwnerPost)
   })
 
   it('should be able to acceptAndClaim after a contract upgrade', async () => {
@@ -229,5 +237,23 @@ describe('Agreement', () => {
 
     const balanceAccount1Post = await pgala.balanceOf(account1.address)
     expect(balanceAccount1Pre.add(amount)).to.be.eq(balanceAccount1Post)
+  })
+
+  it('should be able to acceptAndClaimManyOwner', async () => {
+    const addresses = [account1.address, account2.address]
+    const amounts = ['1000', '2000']
+
+    await agreement.setClaimForMany(addresses, amounts)
+
+    const balanceOwnerPre = await pgala.balanceOf(owner.address)
+
+    expect(await agreement.acceptAndClaimManyOwner(addresses))
+      .to.emit(agreement, 'AcceptedAndClaimed')
+      .withArgs(addresses[0], '', amounts[0])
+      .and.to.emit(agreement, 'AcceptedAndClaimed')
+      .withArgs(addresses[1], '', amounts[1])
+
+    const balanceOwnerPost = await pgala.balanceOf(owner.address)
+    expect(balanceOwnerPre.add('3000')).to.be.eq(balanceOwnerPost)
   })
 })
