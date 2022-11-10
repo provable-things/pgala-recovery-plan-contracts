@@ -1,27 +1,27 @@
 const { expect } = require('chai')
 const { ethers, upgrades } = require('hardhat')
-const singletons = require('erc1820-ethers-registry')
 
 const IPFS_MULTIHASH = 'ipfs multi hash'
 
-let agreement, accounts, owner, account1, pgala, Agreement
+let agreement, accounts, owner, account1, pgala, Agreement2
 
-describe('Agreement', () => {
+describe('Agreement2', () => {
   beforeEach(async () => {
-    Agreement = await ethers.getContractFactory('Agreement')
-    const PToken = await ethers.getContractFactory('PToken')
+    Agreement2 = await ethers.getContractFactory('Agreement2')
 
     accounts = await ethers.getSigners()
     owner = accounts[0]
     account1 = accounts[1]
-    await singletons.ERC1820Registry(owner)
 
-    pgala = await PToken.deploy('pToken GALA', 'GALA', ethers.utils.parseEther('100000000'))
-    agreement = await upgrades.deployProxy(Agreement, [IPFS_MULTIHASH, pgala.address], {
+    agreement = await upgrades.deployProxy(Agreement2, [IPFS_MULTIHASH], {
       initializer: 'initialize',
       kind: 'transparent',
     })
-    await pgala.transfer(agreement.address, ethers.utils.parseEther('10000'))
+
+    await owner.sendTransaction({
+      to: agreement.address,
+      value: ethers.utils.parseEther('100'),
+    })
   })
 
   it('should be able to set ipfsMultihash', async () => {
@@ -50,6 +50,12 @@ describe('Agreement', () => {
     )
   })
 
+  it('should not be able to emergencyWithdraw', async () => {
+    await expect(agreement.connect(account1).emergencyWithdraw("1")).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
+  })
+
   it('should not acceptAndClaim when amount = 0', async () => {
     await expect(agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH)).to.be.revertedWithCustomError(
       agreement,
@@ -65,33 +71,36 @@ describe('Agreement', () => {
     )
   })
 
-  it('should notbe able to deposit pGALA', async () => {
-    await pgala.transfer(account1.address, ethers.utils.parseEther('10'))
+  it('should notbe able to deposit ETH', async () => {
     await expect(
-      pgala.connect(account1).transfer(agreement.address, ethers.utils.parseEther('10'))
+      account1.sendTransaction({
+        to: agreement.address,
+        value: ethers.utils.parseEther('10000'),
+      })
     ).to.be.revertedWithCustomError(agreement, 'OnlyOwnerCanDepositToken')
   })
 
   it('should be able to acceptAndClaim', async () => {
-    const amount = '10000'
-    const balanceAccount1Pre = await pgala.balanceOf(account1.address)
-    const balanceAgreementPre = await pgala.balanceOf(agreement.address)
+    const amount = ethers.utils.parseEther('0.1')
+    const balanceAccount1Pre = await ethers.provider.getBalance(account1.address)
+    const balanceAgreementPre = await ethers.provider.getBalance(agreement.address)
     expect(await agreement.setClaimFor(account1.address, amount))
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount)
-    expect(await agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH))
-      .to.emit(agreement, 'AcceptedAndClaimed')
-      .withArgs(account1.address, IPFS_MULTIHASH, amount)
 
-    const balanceAccount1Post = await pgala.balanceOf(account1.address)
-    const balanceAgreementPost = await pgala.balanceOf(agreement.address)
-    expect(balanceAccount1Pre.add(amount)).to.be.eq(balanceAccount1Post)
+    const transaction = await agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH)
+    expect(transaction).to.emit(agreement, 'AcceptedAndClaimed').withArgs(account1.address, IPFS_MULTIHASH, amount)
+    const receipt = await transaction.wait()
+
+    const balanceAccount1Post = await ethers.provider.getBalance(account1.address)
+    const balanceAgreementPost = await ethers.provider.getBalance(agreement.address)
+    expect(balanceAccount1Pre.add(amount).sub(transaction.gasPrice.mul(receipt.gasUsed))).to.be.eq(balanceAccount1Post)
     expect(balanceAgreementPre.sub(balanceAgreementPost)).to.be.eq(amount)
   })
 
   it('should not be able to acceptAndClaim after having already claimed', async () => {
-    const amount = '10000'
-    const balanceAgreementPre = await pgala.balanceOf(agreement.address)
+    const amount = ethers.utils.parseEther('0.1')
+    const balanceAgreementPre = await ethers.provider.getBalance(agreement.address)
     expect(await agreement.setClaimFor(account1.address, amount))
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount)
@@ -102,13 +111,13 @@ describe('Agreement', () => {
       agreement,
       'NothingToClaim'
     )
-    const balanceAgreementPost = await pgala.balanceOf(agreement.address)
+    const balanceAgreementPost = await ethers.provider.getBalance(agreement.address)
     expect(balanceAgreementPre.sub(balanceAgreementPost)).to.be.eq(amount)
   })
 
   it('should be able to acceptAndClaim in more steps', async () => {
     const amount1 = 10000
-    let balanceAgreementPre = await pgala.balanceOf(agreement.address)
+    let balanceAgreementPre = await ethers.provider.getBalance(agreement.address)
     expect(await agreement.setClaimFor(account1.address, amount1))
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount1)
@@ -116,7 +125,7 @@ describe('Agreement', () => {
       .to.emit(agreement, 'AcceptedAndClaimed')
       .withArgs(account1.address, IPFS_MULTIHASH, amount1)
 
-    let balanceAgreementPost = await pgala.balanceOf(agreement.address)
+    let balanceAgreementPost = await ethers.provider.getBalance(agreement.address)
     expect(balanceAgreementPre.sub(balanceAgreementPost)).to.be.eq(amount1)
 
     const amount2 = 50000
@@ -128,7 +137,7 @@ describe('Agreement', () => {
       .to.emit(agreement, 'AcceptedAndClaimed')
       .withArgs(account1.address, IPFS_MULTIHASH, amountClaimable)
 
-    balanceAgreementPost = await pgala.balanceOf(agreement.address)
+    balanceAgreementPost = await ethers.provider.getBalance(agreement.address)
     expect(balanceAgreementPre.sub(balanceAgreementPost)).to.be.eq(amountClaimable + amount1)
   })
 
@@ -206,28 +215,41 @@ describe('Agreement', () => {
   })
 
   it('should be able toacceptAndClaimOwner', async () => {
-    const amount = '10000'
+    const amount = ethers.utils.parseEther('0.1')
     expect(await agreement.acceptAndClaimOwner(amount))
       .to.emit(agreement, 'AcceptedAndClaimed')
       .withArgs(owner.address, '', amount)
   })
 
   it('should be able to acceptAndClaim after a contract upgrade', async () => {
-    const amount = '10000'
-    const balanceAccount1Pre = await pgala.balanceOf(account1.address)
+    const amount = ethers.utils.parseEther('0.1')
+    const balanceAccount1Pre = await ethers.provider.getBalance(account1.address)
     expect(await agreement.setClaimFor(account1.address, amount))
       .to.emit(agreement, 'ClaimForSet')
       .withArgs(account1.address, amount)
 
-    await upgrades.upgradeProxy(agreement.address, Agreement, {
+    await upgrades.upgradeProxy(agreement.address, Agreement2, {
       kind: 'transparent',
     })
 
-    expect(await agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH))
-      .to.emit(agreement, 'AcceptedAndClaimed')
-      .withArgs(account1.address, IPFS_MULTIHASH, amount)
+    const transaction = await agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH)
+    expect(transaction).to.emit(agreement, 'AcceptedAndClaimed').withArgs(account1.address, IPFS_MULTIHASH, amount)
+    const receipt = await transaction.wait()
 
-    const balanceAccount1Post = await pgala.balanceOf(account1.address)
-    expect(balanceAccount1Pre.add(amount)).to.be.eq(balanceAccount1Post)
+    const balanceAccount1Post = await ethers.provider.getBalance(account1.address)
+    expect(balanceAccount1Pre.add(amount).sub(transaction.gasPrice.mul(receipt.gasUsed))).to.be.eq(balanceAccount1Post)
+  })
+
+  it('should be able to emergencyWithdraw', async () => {
+    const balanceOwnerPre = await ethers.provider.getBalance(owner.address)
+    const balanceAgreementPre = await ethers.provider.getBalance(agreement.address)
+
+    const transaction = await agreement.emergencyWithdraw(balanceAgreementPre)
+    const receipt = await transaction.wait()
+
+    const balanceOwnerPost = await ethers.provider.getBalance(owner.address)
+    const balanceAgreementPost = await ethers.provider.getBalance(agreement.address)
+    expect(balanceOwnerPre.add(balanceAgreementPre).sub(transaction.gasPrice.mul(receipt.gasUsed))).to.be.eq(balanceOwnerPost)
+    expect(balanceAgreementPost).to.be.eq(0)
   })
 })

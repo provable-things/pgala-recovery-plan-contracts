@@ -31,10 +31,14 @@ const main = async () => {
   ])
   const rows = await readFile(filename)
   const addresses = rows.map(([_address]) => _address)
-  const amounts = rows.map(([, _amount]) => BigNumber(_amount).multipliedBy(10 ** 18).toFixed())
+  const amounts = rows.map(([, _amount]) =>
+    BigNumber(_amount)
+      .multipliedBy(10 ** 18)
+      .toFixed()
+  )
 
   const agreement = await ethers.getContractAt('Agreement', AGREEMENT)
-  
+
   if (addresses.length !== amounts.length) {
     throw new Error('Invalid length')
   }
@@ -46,20 +50,20 @@ const main = async () => {
       return _acc
     },0)
   )*/
-    
+
   for (let i = 0, chunk = 0; i < addresses.length; i += CHUNK_SIZE, chunk++) {
-      const addressesChunk = addresses.slice(i, i + CHUNK_SIZE);
-      const amountsChunk = amounts.slice(i, i + CHUNK_SIZE);
+    const addressesChunk = addresses.slice(i, i + CHUNK_SIZE)
+    const amountsChunk = amounts.slice(i, i + CHUNK_SIZE)
 
-      if (addressesChunk.length !== amountsChunk.length) {
-        throw new Error('Invalid length')
-      }
+    if (addressesChunk.length !== amountsChunk.length) {
+      throw new Error('Invalid length')
+    }
 
-      console.info(`setting claims for chunk #${chunk} ...`)
-      await agreement.setClaimForMany(addressesChunk, amountsChunk, {
-        gasLimit: 35000000,
-      })
-      console.info(`claims for chunk #${chunk} set!`)
+    console.info(`setting claims for chunk #${chunk} ...`)
+    await agreement.setClaimForMany(addressesChunk, amountsChunk, {
+      gasLimit: 35000000,
+    })
+    console.info(`claims for chunk #${chunk} set!`)
   }
 }
 

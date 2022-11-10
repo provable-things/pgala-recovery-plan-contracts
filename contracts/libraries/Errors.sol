@@ -7,4 +7,5 @@ library Errors {
     error NothingToClaim();
     error InvalidLength();
     error InvalidAmount();
+    error FailedToSendEther();
 }
