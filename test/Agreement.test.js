@@ -256,4 +256,30 @@ describe('Agreement', () => {
     const balanceOwnerPost = await pgala.balanceOf(owner.address)
     expect(balanceOwnerPre.add('3000')).to.be.eq(balanceOwnerPost)
   })
+
+  it('should not be able to acceptAndClaim after acceptAndClaimOwner', async () => {
+    await agreement.setClaimFor(account1.address, '10000')
+    await agreement.acceptAndClaimOwner(account1.address)
+    await expect(agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH)).to.be.revertedWithCustomError(
+      agreement,
+      'NothingToClaim'
+    )
+  })
+
+  it('should not be able to acceptAndClaim after acceptAndClaimManyOwner', async () => {
+    const addresses = [account1.address, account2.address]
+    const amounts = ['1000', '2000']
+
+    await agreement.setClaimForMany(addresses, amounts)
+    await agreement.acceptAndClaimManyOwner(addresses)
+    
+    await expect(agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH)).to.be.revertedWithCustomError(
+      agreement,
+      'NothingToClaim'
+    )
+    await expect(agreement.connect(account2).acceptAndClaim(IPFS_MULTIHASH)).to.be.revertedWithCustomError(
+      agreement,
+      'NothingToClaim'
+    )
+  })
 })
