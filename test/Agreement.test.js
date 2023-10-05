@@ -272,7 +272,7 @@ describe('Agreement', () => {
 
     await agreement.setClaimForMany(addresses, amounts)
     await agreement.acceptAndClaimManyOwner(addresses)
-    
+
     await expect(agreement.connect(account1).acceptAndClaim(IPFS_MULTIHASH)).to.be.revertedWithCustomError(
       agreement,
       'NothingToClaim'

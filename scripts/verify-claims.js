@@ -58,7 +58,7 @@ const main = async () => {
     }
   }
 
-  console.log("Missing claimed amount", missingClaimedAmount.toFixed())
+  console.log('Missing claimed amount', missingClaimedAmount.toFixed())
 }
 
 main()
