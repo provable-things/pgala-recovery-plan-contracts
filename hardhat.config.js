@@ -4,6 +4,7 @@ require('@openzeppelin/hardhat-upgrades')
 require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('@nomicfoundation/hardhat-chai-matchers')
+require('./tasks')
 
 const getEnvironmentVariable = (_envVar) => process.env[_envVar]
 
