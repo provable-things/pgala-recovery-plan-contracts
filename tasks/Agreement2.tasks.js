@@ -1,6 +1,6 @@
-const { types } = require('hardhat/config')
 const fs = require('fs')
 const csvReadableStream = require('csv-reader')
+const { default: BigNumber } = require('bignumber.js')
 
 const readFile = (_filename) =>
   new Promise((_resolve) => {
@@ -38,14 +38,17 @@ task('step2:upgrade-agreement', 'Upgrade the Agreement2')
 task('step2:set-claim-for-many', 'Initialize BNB amounts to distribute')
   .addPositionalParam('filename')
   .addPositionalParam('agreementAddress')
-  .addPositionalParam('chunkSize', types.int)
+  .addPositionalParam('chunkSize')
   .setAction(async (_args) => {
     const rows = await readFile(_args.filename)
-    const addresses = rows.map(([_address]) => _address)
-    const amounts = rows.map(([_, amount]) => amount)
+    const filteredRows = rows.filter(([_, _amount]) => Number(_amount) > 0)
+
+    const addresses = filteredRows.map(([_address]) => _address)
+    const amounts = filteredRows.map(([_, amount]) => amount)
     const agreement = await ethers.getContractAt('Agreement2', _args.agreementAddress)
 
-    const chunkSize = _args.chunkSize
+    const chunkSize = Number(_args.chunkSize)
+    let amount = BigNumber(0)
     for (let i = 0, chunk = 0; i < addresses.length; i += chunkSize, chunk++) {
       const addressesChunk = addresses.slice(i, i + chunkSize)
       const amountsChunk = amounts.slice(i, i + chunkSize)
@@ -55,17 +58,27 @@ task('step2:set-claim-for-many', 'Initialize BNB amounts to distribute')
       }
 
       console.info(`setting claims for chunk #${chunk} ...`)
-      await agreement.setClaimForMany(addressesChunk, amountsChunk, {
+      const bnAmountsChunk = amountsChunk.map((_amount) =>
+        BigNumber(_amount)
+          .multipliedBy(10 ** 18)
+          .toFixed()
+      )
+      amount = bnAmountsChunk.reduce((_acc, _amount) => {
+        _acc = _acc.plus(_amount)
+        return _acc
+      }, amount)
+      await agreement.setClaimForMany(addressesChunk, bnAmountsChunk, {
         gasLimit: 35000000,
       })
       console.info(`claims for chunk #${chunk} set!`)
     }
+
+    console.log(`Total reimbursed: ${amount.dividedBy(10 ** 18).toFixed()} BNB`)
   })
 
 task('step2:verify-claims', 'Verify claimed amounts')
   .addPositionalParam('filename')
   .addPositionalParam('agreementAddress')
-  .addPositionalParam('chunkSize', types.int)
   .setAction(async (_args) => {
     const rows = await readFile(_args.filename)
     const addresses = rows.map(([_address]) => _address)
@@ -95,14 +108,15 @@ task('step2:verify-claims', 'Verify claimed amounts')
 task('step2:accept-and-claim-many-owner', 'Claim for a third party')
   .addPositionalParam('filename')
   .addPositionalParam('agreementAddress')
-  .addPositionalParam('chunkSize', types.int)
+  .addPositionalParam('chunkSize')
   .setAction(async (_args) => {
     const rows = await readFile(_args.filename)
     const addresses = rows.map(([_address]) => _address)
     const agreement = await ethers.getContractAt('Agreement2', _args.agreementAddress)
 
-    for (let i = 0, chunk = 0; i < addresses.length; i += _args.chunkSize, chunk++) {
-      const addressesChunk = addresses.slice(i, i + _args.chunkSize)
+    const chunkSize = Number(_args.chunkSize)
+    for (let i = 0, chunk = 0; i < addresses.length; i += chunkSize, chunk++) {
+      const addressesChunk = addresses.slice(i, i + chunkSize)
 
       console.info(`setting claims for chunk #${chunk} ...`)
       await agreement.acceptAndClaimManyOwner(addressesChunk, {

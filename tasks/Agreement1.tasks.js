@@ -1,4 +1,3 @@
-const { types } = require('hardhat/config')
 const fs = require('fs')
 const csvReadableStream = require('csv-reader')
 
@@ -39,7 +38,7 @@ task('step1:upgrade-agreement', 'Deploy the Agreement')
 task('step1:set-claim-for-many', 'Initialize amounts to distribute')
   .addPositionalParam('filename')
   .addPositionalParam('agreementAddress')
-  .addPositionalParam('chunkSize', types.int)
+  .addPositionalParam('chunkSize')
   .setAction(async (_args) => {
     const rows = await readFile(_args.filename)
     const addresses = rows.map(([_address]) => _address)
@@ -95,14 +94,15 @@ task('step1:verify-claims', 'Verify claimed amounts')
 task('step1:accept-and-claim-many-owner', 'Claim for a third party')
   .addPositionalParam('filename')
   .addPositionalParam('agreementAddress')
-  .addPositionalParam('chunkSize', types.int)
+  .addPositionalParam('chunkSize')
   .setAction(async (_args) => {
     const rows = await readFile(_args.filename)
     const addresses = rows.map(([_address]) => _address)
     const agreement = await ethers.getContractAt('Agreement', _args.agreementAddress)
 
-    for (let i = 0, chunk = 0; i < addresses.length; i += _args.chunkSize, chunk++) {
-      const addressesChunk = addresses.slice(i, i + _args.chunkSize)
+    const chunkSize = _args.chunkSize
+    for (let i = 0, chunk = 0; i < addresses.length; i += chunkSize, chunk++) {
+      const addressesChunk = addresses.slice(i, i + chunkSize)
 
       console.info(`setting claims for chunk #${chunk} ...`)
       await agreement.acceptAndClaimManyOwner(addressesChunk, {
