@@ -67,9 +67,11 @@ task('step2:set-claim-for-many', 'Initialize BNB amounts to distribute')
         _acc = _acc.plus(_amount)
         return _acc
       }, amount)
-      await agreement.setClaimForMany(addressesChunk, bnAmountsChunk, {
+      
+      const tx = await agreement.setClaimForMany(addressesChunk, bnAmountsChunk, {
         gasLimit: 35000000,
       })
+      await tx.wait(1)
       console.info(`claims for chunk #${chunk} set!`)
     }
 
@@ -124,4 +126,13 @@ task('step2:accept-and-claim-many-owner', 'Claim for a third party')
       })
       console.info(`claims for chunk #${chunk} set!`)
     }
+  })
+
+task('step2:transfer-ownership', 'Transfer contract ownership')
+  .addPositionalParam('agreementAddress')
+  .addPositionalParam('newOwner')
+  .setAction(async (_args) => {
+    const agreement = await ethers.getContractAt('Agreement2', _args.agreementAddress)
+    await agreement.transferOwnership(_args.newOwner)
+    console.log(`Ownership successfully transferred to ${_args.newOwner}`)
   })
